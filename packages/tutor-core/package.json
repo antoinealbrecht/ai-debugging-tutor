@@ -1,0 +1,11 @@
+﻿{
+  "name": "@ai-debugging-tutor/tutor-core",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "src/index.ts",
+  "types": "src/index.ts",
+  "dependencies": {
+    "@ai-debugging-tutor/shared": "0.1.0"
+  }
+}
