@@ -748,4 +748,4 @@ export {
   evaluateCalculatorStepAnswer,
   getCurrentCalculatorStep,
   recordCalculatorStepAnswer,
-} from "./calculator-demo.js";
+} from "./calculator-demo";

@@ -5,35 +5,160 @@ import { useState } from "react";
 import type {
   CodeChangeEvaluation,
   DebuggingSession,
-  ProgressiveHint
+  ProgressiveHint,
+  SessionResult
 } from "@ai-debugging-tutor/shared";
 
 import {
+  completeCalculatorDemoSession,
   completeDemoSession,
+  createDemoCalculatorLogicSession,
   createDemoImportErrorSession,
+  evaluateCalculatorCodeChange,
   evaluateDemoCodeChange,
+  getCurrentCalculatorStep,
   getCurrentStep,
+  recordCalculatorStepAnswer,
   recordStepAnswer
 } from "@ai-debugging-tutor/tutor-core";
 
-const defaultDiff = `- import { StatCard } from '@/components/StatCard';
-+ import { StatCard } from './components/StatCard';`;
+type DemoKind = "import" | "calculator";
+
+type DemoConfig = {
+  title: string;
+  label: string;
+  description: string;
+  category: string;
+  primaryFilePath: string;
+  primaryCode: string;
+  secondaryFilePath?: string;
+  secondaryCode?: string;
+  defaultDiff: string;
+};
+
+const demos: Record<DemoKind, DemoConfig> = {
+  import: {
+    title: "Import/module-resolution bug",
+    label: "Import Error",
+    description:
+      "A Next.js component import points to the wrong location. The tutor teaches path aliases, relative imports, and file structure.",
+    category: "import_module_resolution",
+    primaryFilePath: "src/app/page.tsx",
+    primaryCode: `import { StatCard } from '@/components/StatCard';
+
+export default function Page() {
+  return <StatCard title="Users" value="120" />;
+}`,
+    secondaryFilePath: "src/app/components/StatCard.tsx",
+    secondaryCode: `type StatCardProps = {
+  title: string;
+  value: string;
+};
+
+export function StatCard({ title, value }: StatCardProps) {
+  return <div>{title}: {value}</div>;
+}`,
+    defaultDiff: `- import { StatCard } from '@/components/StatCard';
++ import { StatCard } from './components/StatCard';`
+  },
+  calculator: {
+    title: "Calculator incorrect-output bug",
+    label: "Logic Bug",
+    description:
+      "A calculator function runs without crashing but produces the wrong output. The tutor teaches input types, string concatenation, and number conversion.",
+    category: "incorrect_output_logic_error",
+    primaryFilePath: "src/calculator.ts",
+    primaryCode: `function add(a: string, b: string) {
+  return a + b;
+}
+
+console.log(add("2", "3"));
+
+// Expected: 5
+// Actual: 23`,
+    defaultDiff: `-   return a + b;
++   return Number(a) + Number(b);`
+  }
+};
+
+function createSessionForDemo(kind: DemoKind): DebuggingSession {
+  if (kind === "calculator") {
+    return createDemoCalculatorLogicSession();
+  }
+
+  return createDemoImportErrorSession();
+}
+
+function getCurrentStepForDemo(kind: DemoKind, session: DebuggingSession) {
+  if (kind === "calculator") {
+    return getCurrentCalculatorStep(session);
+  }
+
+  return getCurrentStep(session);
+}
+
+function recordAnswerForDemo(
+  kind: DemoKind,
+  session: DebuggingSession,
+  answerText: string
+): DebuggingSession {
+  if (kind === "calculator") {
+    return recordCalculatorStepAnswer(session, answerText);
+  }
+
+  return recordStepAnswer(session, answerText);
+}
+
+function evaluateCodeChangeForDemo(
+  kind: DemoKind,
+  diffText: string
+): CodeChangeEvaluation {
+  if (kind === "calculator") {
+    return evaluateCalculatorCodeChange(diffText);
+  }
+
+  return evaluateDemoCodeChange(diffText);
+}
+
+function completeSessionForDemo(
+  kind: DemoKind,
+  session: DebuggingSession,
+  sessionResult: SessionResult
+): DebuggingSession {
+  if (kind === "calculator") {
+    return completeCalculatorDemoSession(session, sessionResult);
+  }
+
+  return completeDemoSession(session, sessionResult);
+}
 
 export default function Home() {
+  const [demoKind, setDemoKind] = useState<DemoKind>("import");
   const [session, setSession] = useState<DebuggingSession>(() =>
-    createDemoImportErrorSession()
+    createSessionForDemo("import")
   );
 
   const [answerText, setAnswerText] = useState("");
-  const [diffText, setDiffText] = useState(defaultDiff);
+  const [diffText, setDiffText] = useState(demos.import.defaultDiff);
   const [manualHint, setManualHint] = useState<ProgressiveHint | null>(null);
   const [manualHintLevel, setManualHintLevel] = useState(0);
   const [codeEvaluation, setCodeEvaluation] =
     useState<CodeChangeEvaluation | null>(null);
 
-  const currentStep = getCurrentStep(session);
+  const currentDemo = demos[demoKind];
+  const currentStep = getCurrentStepForDemo(demoKind, session);
   const latestEvaluation = session.evaluations.at(-1) ?? null;
   const finalReport = session.finalReport;
+
+  function switchDemo(nextDemoKind: DemoKind) {
+    setDemoKind(nextDemoKind);
+    setSession(createSessionForDemo(nextDemoKind));
+    setAnswerText("");
+    setDiffText(demos[nextDemoKind].defaultDiff);
+    setManualHint(null);
+    setManualHintLevel(0);
+    setCodeEvaluation(null);
+  }
 
   function handleSubmitAnswer() {
     if (!answerText.trim()) {
@@ -41,7 +166,7 @@ export default function Home() {
     }
 
     const previousStepId = session.currentStepId;
-    const nextSession = recordStepAnswer(session, answerText);
+    const nextSession = recordAnswerForDemo(demoKind, session, answerText);
 
     setSession(nextSession);
     setAnswerText("");
@@ -65,20 +190,17 @@ export default function Home() {
   }
 
   function handleCheckChange() {
-    const evaluation = evaluateDemoCodeChange(diffText);
+    const evaluation = evaluateCodeChangeForDemo(demoKind, diffText);
 
     const updatedSession: DebuggingSession = {
       ...session,
-      codeChangeEvaluations: [
-        ...session.codeChangeEvaluations,
-        evaluation
-      ]
+      codeChangeEvaluations: [...session.codeChangeEvaluations, evaluation]
     };
 
     setCodeEvaluation(evaluation);
 
     if (evaluation.status === "fixes_root_cause") {
-      setSession(completeDemoSession(updatedSession, "self_solved"));
+      setSession(completeSessionForDemo(demoKind, updatedSession, "self_solved"));
       return;
     }
 
@@ -94,16 +216,11 @@ export default function Home() {
       return;
     }
 
-    setSession(completeDemoSession(session, "solution_revealed"));
+    setSession(completeSessionForDemo(demoKind, session, "solution_revealed"));
   }
 
   function handleRestart() {
-    setSession(createDemoImportErrorSession());
-    setAnswerText("");
-    setDiffText(defaultDiff);
-    setManualHint(null);
-    setManualHintLevel(0);
-    setCodeEvaluation(null);
+    switchDemo(demoKind);
   }
 
   return (
@@ -118,39 +235,56 @@ export default function Home() {
           </p>
         </div>
 
+        <div className="demoSwitcher">
+          <button
+            className={demoKind === "import" ? "activeDemoButton" : "secondaryButton"}
+            onClick={() => switchDemo("import")}
+          >
+            Import bug
+          </button>
+          <button
+            className={
+              demoKind === "calculator" ? "activeDemoButton" : "secondaryButton"
+            }
+            onClick={() => switchDemo("calculator")}
+          >
+            Calculator logic bug
+          </button>
+        </div>
+
+        <div className="panelHeader">
+          <p className="eyebrow">Selected Demo</p>
+          <h2>{currentDemo.title}</h2>
+          <p className="subtle">{currentDemo.description}</p>
+          <p className="meta">
+            Category: <strong>{currentDemo.category}</strong>
+          </p>
+        </div>
+
         <div className="codeCard">
           <div className="codeHeader">
-            <span>src/app/page.tsx</span>
-            <span className="errorBadge">Import Error</span>
+            <span>{currentDemo.primaryFilePath}</span>
+            <span className="errorBadge">{currentDemo.label}</span>
           </div>
 
-          <pre>{`import { StatCard } from '@/components/StatCard';
-
-export default function Page() {
-  return <StatCard title="Users" value="120" />;
-}`}</pre>
+          <pre>{currentDemo.primaryCode}</pre>
         </div>
 
         <div className="terminalCard">
-          <p className="terminalTitle">Terminal Error</p>
+          <p className="terminalTitle">Problem</p>
           <code>{session.parsedError.rawMessage}</code>
         </div>
 
-        <div className="codeCard">
-          <div className="codeHeader">
-            <span>src/app/components/StatCard.tsx</span>
-            <span className="successBadge">Existing File</span>
+        {currentDemo.secondaryFilePath && currentDemo.secondaryCode ? (
+          <div className="codeCard">
+            <div className="codeHeader">
+              <span>{currentDemo.secondaryFilePath}</span>
+              <span className="successBadge">Relevant File</span>
+            </div>
+
+            <pre>{currentDemo.secondaryCode}</pre>
           </div>
-
-          <pre>{`type StatCardProps = {
-  title: string;
-  value: string;
-};
-
-export function StatCard({ title, value }: StatCardProps) {
-  return <div>{title}: {value}</div>;
-}`}</pre>
-        </div>
+        ) : null}
       </section>
 
       <aside className="tutorPanel">
@@ -166,7 +300,8 @@ export function StatCard({ title, value }: StatCardProps) {
           <h3>Error Summary</h3>
           <p>{session.parsedError.rawMessage}</p>
           <p className="meta">
-            {session.parsedError.filePath}:{session.parsedError.line}
+            {session.parsedError.filePath}
+            {session.parsedError.line ? `:${session.parsedError.line}` : ""}
           </p>
         </section>
 
@@ -193,6 +328,21 @@ export function StatCard({ title, value }: StatCardProps) {
         <section className="card">
           <h3>Debugging Lesson</h3>
           <p className="meta">{session.lesson.objective}</p>
+
+          <div className="progressList">
+            {session.lesson.steps.map((step) => (
+              <span
+                className={
+                  step.id === session.currentStepId
+                    ? "progressPill activeProgressPill"
+                    : "progressPill"
+                }
+                key={step.id}
+              >
+                {step.id.replace("step-", "Step ")}
+              </span>
+            ))}
+          </div>
 
           <div className="stepBox">
             <p className="stepCount">
@@ -233,8 +383,7 @@ export function StatCard({ title, value }: StatCardProps) {
               <strong>Status:</strong> {latestEvaluation.status}
             </p>
             <p>
-              <strong>What was right:</strong>{" "}
-              {latestEvaluation.whatWasRight}
+              <strong>What was right:</strong> {latestEvaluation.whatWasRight}
             </p>
 
             {latestEvaluation.misconception ? (

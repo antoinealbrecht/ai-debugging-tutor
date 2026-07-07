@@ -249,3 +249,35 @@ button:hover {
     grid-template-columns: 1fr;
   }
 }
+
+.demoSwitcher {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.activeDemoButton {
+  background: #2563eb;
+}
+
+.progressList {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.progressPill {
+  border: 1px solid #3f3f46;
+  border-radius: 999px;
+  padding: 5px 10px;
+  color: #a1a1aa;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.activeProgressPill {
+  border-color: #2563eb;
+  color: #bfdbfe;
+  background: rgba(37, 99, 235, 0.16);
+}
