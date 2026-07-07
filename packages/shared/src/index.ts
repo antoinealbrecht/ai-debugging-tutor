@@ -1,4 +1,4 @@
-﻿export type IsoDateString = string;
+export type IsoDateString = string;
 
 export type ConfidenceLevel = "high" | "medium" | "low";
 
