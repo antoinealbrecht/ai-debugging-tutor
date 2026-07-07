@@ -20,10 +20,14 @@ export type CodeLocation = {
 };
 
 export type SupportedErrorCategory =
+  | "syntax_parse_error"
   | "import_module_resolution"
   | "typescript_type_error"
   | "nullability_error"
   | "function_signature_error"
+  | "runtime_exception"
+  | "incorrect_output_logic_error"
+  | "test_failure"
   | "react_hook_error"
   | "nextjs_server_client_error"
   | "async_logic_error"
