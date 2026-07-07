@@ -740,3 +740,12 @@ function isClarificationRequest(value: string): boolean {
     "confused",
   ]);
 }
+
+export {
+  completeCalculatorDemoSession,
+  createDemoCalculatorLogicSession,
+  evaluateCalculatorCodeChange,
+  evaluateCalculatorStepAnswer,
+  getCurrentCalculatorStep,
+  recordCalculatorStepAnswer,
+} from "./calculator-demo.js";

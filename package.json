@@ -10,7 +10,8 @@
     "typecheck": "tsc --noEmit",
     "demo:tutor": "tsx packages/tutor-core/src/demo.ts",
     "test": "vitest run",
-    "web": "npm run dev -w @ai-debugging-tutor/web"
+    "web": "npm run dev -w @ai-debugging-tutor/web",
+    "demo:calculator": "tsx packages/tutor-core/src/calculator-demo-runner.ts"
   },
   "devDependencies": {
     "tsx": "^4.20.0",
