@@ -435,6 +435,23 @@ export function evaluateDemoCodeChange(diffText: string): CodeChangeEvaluation {
     },
   ];
 
+  if (normalized.includes("../components/statcard")) {
+    return {
+      status: "introduces_new_issue",
+      explanation:
+        "This change uses a relative path, but it goes up one folder first. From src/app/page.tsx, '../components/StatCard' would point outside src/app, so it likely misses the actual component.",
+      changedLocations,
+      newIssuesIntroduced: [
+        "The import path may now point to src/components/StatCard instead of src/app/components/StatCard.",
+      ],
+      stillMissing: [
+        "Use the path that starts from src/app/page.tsx and reaches src/app/components/StatCard.tsx.",
+      ],
+      userLikelyUnderstandsFix: false,
+      advanceLesson: false,
+    };
+  }
+
   if (normalized.includes("./components/statcard")) {
     return {
       status: "fixes_root_cause",
@@ -445,21 +462,6 @@ export function evaluateDemoCodeChange(diffText: string): CodeChangeEvaluation {
       stillMissing: [],
       userLikelyUnderstandsFix: true,
       advanceLesson: true,
-    };
-  }
-
-  if (normalized.includes("../components/statcard")) {
-    return {
-      status: "introduces_new_issue",
-      explanation:
-        "This change uses a relative path, but it goes up one folder first. From src/app/page.tsx, '../components/StatCard' would point outside src/app, so it likely misses the actual component.",
-      changedLocations,
-      newIssuesIntroduced: [
-        "The import path may now point to src/components/StatCard instead of src/app/components/StatCard.",
-      ],
-      stillMissing: ["Use the path that starts from src/app/page.tsx and reaches src/app/components/StatCard.tsx."],
-      userLikelyUnderstandsFix: false,
-      advanceLesson: false,
     };
   }
 
