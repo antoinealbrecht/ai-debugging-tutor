@@ -558,7 +558,7 @@ export function completeDemoSession(
 function evaluateStepOne(normalized: string, session: DebuggingSession): StepEvaluation {
   if (
     hasAny(normalized, ["alias", "path alias", "@"]) &&
-    !hasAny(normalized, ["relative", "./", "../"])
+    !hasAny(normalized, ["it is a relative", "it's a relative", "is relative because"])
   ) {
     return {
       status: "correct",
@@ -609,8 +609,8 @@ function evaluateStepOne(normalized: string, session: DebuggingSession): StepEva
 
 function evaluateStepTwo(normalized: string, session: DebuggingSession): StepEvaluation {
   if (
-    hasAny(normalized, ["src/components", "src\\components"]) ||
-    hasAny(normalized, ["components/statcard", "components\\statcard"])
+    hasAny(normalized, ["src/components", "src\\components"]) &&
+    !hasAny(normalized, ["src/app/components", "src\\app\\components"])
   ) {
     return {
       status: "correct",
